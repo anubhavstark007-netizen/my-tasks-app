@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101827">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="My Tasks">
+  <title>My Tasks</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    :root { color-scheme: dark; --bg:#0b1220; --panel:#111c2f; --panel2:#17243a; --text:#f4f7fb; --muted:#9baac0; --accent:#77e0b5; --line:#293850; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--text); background:radial-gradient(circle at top right,#1d3552 0,#0b1220 45%); }
+    main { max-width:680px; margin:0 auto; padding:calc(22px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom)); }
+    .topline { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .eyebrow { color:var(--accent); font-size:12px; letter-spacing:2px; text-transform:uppercase; font-weight:800; }
+    .date { color:var(--muted); font-size:12px; text-align:right; }
+    h1 { font-size:clamp(30px,8vw,42px); margin:12px 0 6px; letter-spacing:-1.5px; }
+    .subtitle { color:var(--muted); margin:0 0 22px; font-size:14px; }
+    .stats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+    .stat { background:rgba(23,36,58,.85); border:1px solid var(--line); border-radius:18px; padding:16px; }
+    .stat .num { display:block; font-size:27px; font-weight:800; }
+    .stat .label { color:var(--muted); font-size:12px; margin-top:4px; }
+    .addbox { display:flex; gap:9px; margin-bottom:22px; }
+    input { min-width:0; flex:1; background:#101a2b; color:var(--text); border:1px solid #34445e; border-radius:14px; padding:15px 14px; font-size:16px; outline:none; }
+    input:focus { border-color:var(--accent); }
+    button { border:0; cursor:pointer; font:inherit; }
+    .addbtn { background:var(--accent); color:#092117; font-weight:800; border-radius:14px; padding:0 19px; font-size:24px; }
+    .sectionhead { display:flex; justify-content:space-between; align-items:center; margin:0 2px 10px; }
+    h2 { font-size:15px; margin:0; }
+    .count { color:var(--muted); font-size:12px; }
+    .tasklist { display:flex; flex-direction:column; gap:10px; }
+    .task { display:flex; align-items:center; gap:12px; padding:15px 14px; border:1px solid var(--line); background:rgba(17,28,47,.9); border-radius:16px; animation:appear .18s ease-out; }
+    .task input[type=checkbox] { appearance:none; flex:none; width:23px; height:23px; border:2px solid #63748d; border-radius:8px; margin:0; padding:0; cursor:pointer; display:grid; place-items:center; }
+    .task input[type=checkbox]:checked { background:var(--accent); border-color:var(--accent); }
+    .task input[type=checkbox]:checked::after { content:"✓"; color:#082116; font-size:16px; font-weight:900; }
+    .tasktext { flex:1; min-width:0; overflow-wrap:anywhere; font-size:15px; line-height:1.4; }
+    .taskdate { display:block; color:var(--muted); font-size:11px; margin-top:4px; }
+    .delete { background:transparent; color:#92a2ba; padding:7px; font-size:18px; border-radius:8px; }
+    .delete:active { background:#26344b; }
+    .empty { color:var(--muted); text-align:center; border:1px dashed #34445e; border-radius:16px; padding:26px 16px; font-size:14px; }
+    .foot { color:#74849c; font-size:11px; text-align:center; margin-top:24px; line-height:1.5; }
+    @keyframes appear { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+  </style>
+</head>
+<body>
+<main>
+  <div class="topline">
+    <div class="eyebrow">Daily focus</div>
+    <div class="date" id="today"></div>
+  </div>
+  <h1>My Tasks<span style="color:var(--accent)">.</span></h1>
+  <p class="subtitle">One task at a time. Keep moving forward.</p>
+
+  <div class="stats">
+    <div class="stat"><span class="num" id="pendingCount">0</span><span class="label">Pending tasks</span></div>
+    <div class="stat"><span class="num" id="doneCount">0</span><span class="label">Completed today</span></div>
+  </div>
+
+  <form class="addbox" id="taskForm">
+    <input id="taskInput" type="text" maxlength="180" placeholder="Add a new task..." autocomplete="off" required>
+    <button class="addbtn" aria-label="Add task" type="submit">+</button>
+  </form>
+
+  <div class="sectionhead"><h2>YOUR TASKS</h2><span class="count" id="taskCount"></span></div>
+  <div class="tasklist" id="taskList"></div>
+  <div class="foot">Tasks are stored only in this browser on this device.<br>Clearing website data may erase them.</div>
+</main>
+<script>
+  const STORAGE_KEY = "myTasksLocal_v1";
+  const DONE_KEY = "myTasksCompletedToday_v1";
+  const $ = (id) => document.getElementById(id);
+  const todayKey = () => new Date().toLocaleDateString("en-CA");
+  const dateLabel = (d = new Date()) => d.toLocaleDateString(undefined, { day:"numeric", month:"short", year:"numeric" });
+  $("today").textContent = new Date().toLocaleDateString(undefined, { weekday:"short", day:"numeric", month:"short", year:"numeric" });
+
+  function readTasks() {
+    try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); return Array.isArray(value) ? value : []; }
+    catch { return []; }
+  }
+  function readDone() {
+    try {
+      const value = JSON.parse(localStorage.getItem(DONE_KEY) || "{}");
+      return value.date === todayKey() ? Number(value.count || 0) : 0;
+    } catch { return 0; }
+  }
+  function saveTasks(tasks) { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
+  function render() {
+    const tasks = readTasks();
+    $("pendingCount").textContent = tasks.length;
+    $("doneCount").textContent = readDone();
+    $("taskCount").textContent = tasks.length ? `${tasks.length} pending` : "";
+    const list = $("taskList");
+    list.innerHTML = "";
+    if (!tasks.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "All clear! Add a task when you’re ready.";
+      list.appendChild(empty);
+      return;
+    }
+    tasks.forEach(task => {
+      const row = document.createElement("div");
+      row.className = "task";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.setAttribute("aria-label", `Complete ${task.text}`);
+      checkbox.addEventListener("change", () => {
+        const updated = readTasks().filter(t => t.id !== task.id);
+        saveTasks(updated);
+        let done = readDone() + 1;
+        localStorage.setItem(DONE_KEY, JSON.stringify({ date: todayKey(), count: done }));
+        render();
+      });
+      const info = document.createElement("div");
+      info.className = "tasktext";
+      const text = document.createElement("div");
+      text.textContent = task.text;
+      const date = document.createElement("span");
+      date.className = "taskdate";
+      date.textContent = `Added ${task.date || dateLabel()}`;
+      info.append(text, date);
+      const del = document.createElement("button");
+      del.className = "delete";
+      del.type = "button";
+      del.textContent = "×";
+      del.setAttribute("aria-label", `Delete ${task.text}`);
+      del.addEventListener("click", () => {
+        saveTasks(readTasks().filter(t => t.id !== task.id));
+        render();
+      });
+      row.append(checkbox, info, del);
+      list.appendChild(row);
+    });
+  }
+  $("taskForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const text = $("taskInput").value.trim();
+    if (!text) return;
+    const tasks = readTasks();
+    tasks.unshift({ id: `${Date.now()}_${Math.random().toString(16).slice(2)}`, text, date: dateLabel() });
+    saveTasks(tasks);
+    $("taskInput").value = "";
+    render();
+    $("taskInput").blur();
+  });
+  render();
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+  }
+</script>
+</body>
+</html>
