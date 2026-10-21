@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="My Tasks">
   <title>My Tasks</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./icon.svg">
   <style>
     :root { color-scheme: dark; --bg:#0b1220; --panel:#111c2f; --panel2:#17243a; --text:#f4f7fb; --muted:#9baac0; --accent:#77e0b5; --line:#293850; }
     * { box-sizing:border-box; }
@@ -21,15 +21,16 @@
     h1 { font-size:clamp(30px,8vw,42px); margin:12px 0 6px; letter-spacing:-1.5px; }
     .subtitle { color:var(--muted); margin:0 0 22px; font-size:14px; }
     .stats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
-    .stat { background:rgba(23,36,58,.85); border:1px solid var(--line); border-radius:18px; padding:16px; }
+    .stat { background:rgba(23,36,58,.85); border:1px solid var(--line); border-radius:18px; padding:16px; text-align:left; color:inherit; width:100%; }
+    .stat.clickable { cursor:pointer; }
     .stat .num { display:block; font-size:27px; font-weight:800; }
-    .stat .label { color:var(--muted); font-size:12px; margin-top:4px; }
+    .stat .label { color:var(--muted); font-size:12px; margin-top:4px; display:block; }
     .addbox { display:flex; gap:9px; margin-bottom:22px; }
-    input { min-width:0; flex:1; background:#101a2b; color:var(--text); border:1px solid #34445e; border-radius:14px; padding:15px 14px; font-size:16px; outline:none; }
+    input[type="text"] { min-width:0; flex:1; background:#101a2b; color:var(--text); border:1px solid #34445e; border-radius:14px; padding:15px 14px; font-size:16px; outline:none; }
     input:focus { border-color:var(--accent); }
     button { border:0; cursor:pointer; font:inherit; }
     .addbtn { background:var(--accent); color:#092117; font-weight:800; border-radius:14px; padding:0 19px; font-size:24px; }
-    .sectionhead { display:flex; justify-content:space-between; align-items:center; margin:0 2px 10px; }
+    .sectionhead { display:flex; justify-content:space-between; align-items:center; margin:22px 2px 10px; gap:12px; }
     h2 { font-size:15px; margin:0; }
     .count { color:var(--muted); font-size:12px; }
     .tasklist { display:flex; flex-direction:column; gap:10px; }
@@ -43,111 +44,360 @@
     .delete:active { background:#26344b; }
     .empty { color:var(--muted); text-align:center; border:1px dashed #34445e; border-radius:16px; padding:26px 16px; font-size:14px; }
     .foot { color:#74849c; font-size:11px; text-align:center; margin-top:24px; line-height:1.5; }
+    .cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .navcard { text-align:left; padding:15px; border:1px solid var(--line); background:rgba(17,28,47,.9); border-radius:16px; color:var(--text); min-height:78px; }
+    .navcard strong { display:block; font-size:14px; margin-bottom:5px; }
+    .navcard span { color:var(--muted); font-size:12px; }
+    .navcard:active, .smallbtn:active { transform:scale(.99); }
+    .smallbtn { background:#20314b; border:1px solid #34445e; color:var(--text); border-radius:10px; padding:8px 11px; font-size:12px; }
+    .backrow { display:flex; gap:8px; align-items:center; margin:0 0 16px; }
+    .backbtn { background:#20314b; color:var(--text); border:1px solid #34445e; border-radius:11px; padding:9px 12px; font-size:13px; }
+    .viewtitle { margin-top:8px; }
+    .hidden { display:none !important; }
+    .modal { position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(4,9,17,.82); backdrop-filter:blur(8px); }
+    .modalbox { width:min(100%,420px); background:#111c2f; border:1px solid #34445e; border-radius:22px; padding:23px; box-shadow:0 20px 80px #0008; }
+    .modalbox h2 { font-size:22px; margin:0 0 8px; }
+    .modalbox p { color:var(--muted); font-size:13px; line-height:1.5; margin:0 0 18px; }
+    .namechoices { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+    .namebtn { padding:13px 10px; border:1px solid #34445e; background:#17243a; color:var(--text); border-radius:12px; font-weight:700; }
+    .namebtn:hover { border-color:var(--accent); }
+    .notice { color:var(--muted); font-size:12px; line-height:1.5; margin:0 0 15px; }
+    .error { color:#ffb6b6; background:#3a1d2a; border:1px solid #693247; padding:12px; border-radius:12px; font-size:13px; margin:12px 0; overflow-wrap:anywhere; }
+    .success { color:#a8f5d7; font-size:12px; min-height:16px; margin:-12px 0 16px; }
+    .taskmeta { color:var(--muted); font-size:11px; margin-top:4px; }
     @keyframes appear { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+    @media (max-width:420px) { .cards { grid-template-columns:1fr; } .stat { padding:13px; } }
   </style>
 </head>
 <body>
+<div id="nameModal" class="modal">
+  <div class="modalbox">
+    <h2>Who are you?</h2>
+    <p>Please select your name. You won't be asked again today on this browser. You'll be asked again tomorrow.</p>
+    <div class="namechoices" id="nameChoices"></div>
+  </div>
+</div>
 <main>
   <div class="topline">
     <div class="eyebrow">Daily focus</div>
-    <div class="date" id="today"></div>
+    <div style="text-align:right">
+      <div class="date" id="today"></div>
+      <button class="smallbtn" id="whoBtn" type="button" style="margin-top:7px">Select person</button>
+    </div>
   </div>
   <h1>My Tasks<span style="color:var(--accent)">.</span></h1>
   <p class="subtitle">One task at a time. Keep moving forward.</p>
 
+  <div id="errorBox" class="error hidden"></div>
+  <div id="noticeBox" class="notice hidden"></div>
+
   <div class="stats">
-    <div class="stat"><span class="num" id="pendingCount">0</span><span class="label">Pending tasks</span></div>
-    <div class="stat"><span class="num" id="doneCount">0</span><span class="label">Completed today</span></div>
+    <div class="stat"><span class="num" id="pendingCount">—</span><span class="label">Pending tasks (all)</span></div>
+    <button class="stat clickable" id="completedTodayBtn" type="button"><span class="num" id="doneCount">—</span><span class="label">Completed today · tap to view</span></button>
   </div>
 
-  <form class="addbox" id="taskForm">
-    <input id="taskInput" type="text" maxlength="180" placeholder="Add a new task..." autocomplete="off" required>
-    <button class="addbtn" aria-label="Add task" type="submit">+</button>
-  </form>
+  <div id="homeView">
+    <div class="sectionhead"><h2>FOLLOW-UP LISTS</h2><span class="count">Shared with everyone</span></div>
+    <div class="cards">
+      <button class="navcard" data-category="Payment Follow-up" type="button"><strong>💳 Payment Follow-up</strong><span>Payment reminders and updates</span></button>
+      <button class="navcard" data-category="Customer Follow-up" type="button"><strong>👥 Customer Follow-up</strong><span>Customer calls and messages</span></button>
+      <button class="navcard" data-category="Quotation Follow-up" type="button"><strong>📄 Quotation Follow-up</strong><span>Quotes to prepare or follow up</span></button>
+    </div>
+    <div class="sectionhead"><h2>TEAM MEMBERS</h2><span class="count">Tap a name to open tasks</span></div>
+    <div class="cards" id="memberCards"></div>
+    <div class="sectionhead"><h2 id="homeTaskHeading">YOUR TASKS</h2><span class="count" id="taskCount"></span></div>
+    <form class="addbox" id="taskFormHome">
+      <input id="taskInputHome" type="text" maxlength="180" placeholder="Add a task to your page..." autocomplete="off" required>
+      <button class="addbtn" aria-label="Add task" type="submit">+</button>
+    </form>
+    <div class="tasklist" id="homeTaskList"></div>
+  </div>
 
-  <div class="sectionhead"><h2>YOUR TASKS</h2><span class="count" id="taskCount"></span></div>
-  <div class="tasklist" id="taskList"></div>
-  <div class="foot">Tasks are stored only in this browser on this device.<br>Clearing website data may erase them.</div>
+  <div id="detailView" class="hidden">
+    <div class="backrow"><button class="backbtn" id="backBtn" type="button">← Home</button><span class="count" id="viewTypeLabel"></span></div>
+    <h2 class="viewtitle" id="detailTitle"></h2>
+    <p class="subtitle" id="detailSubtitle" style="margin-top:7px"></p>
+    <form class="addbox" id="taskFormDetail">
+      <input id="taskInputDetail" type="text" maxlength="180" placeholder="Add a new task..." autocomplete="off" required>
+      <button class="addbtn" aria-label="Add task" type="submit">+</button>
+    </form>
+    <div class="sectionhead"><h2 id="detailListHeading">PENDING TASKS</h2><span class="count" id="detailCount"></span></div>
+    <div class="tasklist" id="detailTaskList"></div>
+    <div id="historyLinkWrap" class="sectionhead hidden"><button class="smallbtn" id="showAllCompletedBtn" type="button">View all completed tasks</button></div>
+  </div>
+  <div class="foot">Shared task data is saved in your Google Sheet until someone deletes it.<br>Choose the correct person before adding tasks.</div>
 </main>
 <script>
-  const STORAGE_KEY = "myTasksLocal_v1";
-  const DONE_KEY = "myTasksCompletedToday_v1";
+  // After deploying the Google Apps Script web app, paste its /exec URL here.
+  const API_URL = "https://script.google.com/macros/s/AKfycbyxpo4FYc5ArJXEALBTr1B970Eng7_2OaPjhR9Fef5djkG8dzNhrTvyGFGm7uwNNuxfMg/exec";
+  const MEMBERS = ["Aakash", "Anuj", "Rishabh", "Anubhav", "Surbhi"];
+  const CATEGORIES = ["Payment Follow-up", "Customer Follow-up", "Quotation Follow-up"];
+  const PERSON_KEY = "myTasksPersonSelection_v2";
   const $ = (id) => document.getElementById(id);
-  const todayKey = () => new Date().toLocaleDateString("en-CA");
-  const dateLabel = (d = new Date()) => d.toLocaleDateString(undefined, { day:"numeric", month:"short", year:"numeric" });
+  let allTasks = [];
+  let currentView = { type: "home", section: "" };
+  let showAllCompleted = false;
+  let busy = false;
+
+  function dateKey(date = new Date()) {
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  }
+  function dateLabel(value) {
+    const d = value ? new Date(value) : new Date();
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString(undefined, { day:"numeric", month:"short", year:"numeric" });
+  }
+  function timeLabel(value) {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? "" : d.toLocaleString(undefined, { day:"numeric", month:"short", hour:"numeric", minute:"2-digit" });
+  }
   $("today").textContent = new Date().toLocaleDateString(undefined, { weekday:"short", day:"numeric", month:"short", year:"numeric" });
 
-  function readTasks() {
-    try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); return Array.isArray(value) ? value : []; }
-    catch { return []; }
-  }
-  function readDone() {
+  function getPerson() {
     try {
-      const value = JSON.parse(localStorage.getItem(DONE_KEY) || "{}");
-      return value.date === todayKey() ? Number(value.count || 0) : 0;
-    } catch { return 0; }
+      const saved = JSON.parse(localStorage.getItem(PERSON_KEY) || "null");
+      if (saved && saved.date === dateKey() && MEMBERS.includes(saved.name)) return saved.name;
+    } catch (_) {}
+    return "";
   }
-  function saveTasks(tasks) { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
-  function render() {
-    const tasks = readTasks();
-    $("pendingCount").textContent = tasks.length;
-    $("doneCount").textContent = readDone();
-    $("taskCount").textContent = tasks.length ? `${tasks.length} pending` : "";
-    const list = $("taskList");
-    list.innerHTML = "";
-    if (!tasks.length) {
-      const empty = document.createElement("div");
-      empty.className = "empty";
-      empty.textContent = "All clear! Add a task when you’re ready.";
-      list.appendChild(empty);
-      return;
-    }
-    tasks.forEach(task => {
-      const row = document.createElement("div");
-      row.className = "task";
+  function openNameModal() {
+    const choices = $("nameChoices");
+    choices.innerHTML = "";
+    MEMBERS.forEach(name => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "namebtn"; b.textContent = name;
+      b.addEventListener("click", () => {
+        localStorage.setItem(PERSON_KEY, JSON.stringify({ name, date: dateKey() }));
+        $("nameModal").classList.add("hidden");
+        updateWhoButton();
+        renderAll();
+        if (!allTasks.length) refreshTasks();
+      });
+      choices.appendChild(b);
+    });
+    $("nameModal").classList.remove("hidden");
+  }
+  function updateWhoButton() {
+    const name = getPerson();
+    $("whoBtn").textContent = name ? `You: ${name} · Change` : "Select person";
+  }
+  function showError(message) {
+    $("errorBox").textContent = message;
+    $("errorBox").classList.remove("hidden");
+  }
+  function clearError() { $("errorBox").classList.add("hidden"); $("errorBox").textContent = ""; }
+  function showNotice(message) {
+    $("noticeBox").textContent = message;
+    $("noticeBox").classList.remove("hidden");
+  }
+  function hideNotice() { $("noticeBox").classList.add("hidden"); $("noticeBox").textContent = ""; }
+
+  function api(params) {
+    return new Promise((resolve, reject) => {
+      if (!API_URL || API_URL.includes("PASTE_YOUR")) {
+        reject(new Error("Pehle Google Apps Script deploy karke index.html mein API_URL paste karein. README mein steps hain."));
+        return;
+      }
+      const callbackName = "myTasksCb_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+      const script = document.createElement("script");
+      const query = new URLSearchParams({ ...params, callback: callbackName, _: String(Date.now()) });
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error("Server se response nahi aaya. Internet aur Apps Script deployment URL check karein."));
+      }, 15000);
+      function cleanup() {
+        clearTimeout(timer);
+        try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+        script.remove();
+      }
+      window[callbackName] = (data) => { cleanup(); data && data.ok ? resolve(data) : reject(new Error((data && data.error) || "Request failed.")); };
+      script.onerror = () => { cleanup(); reject(new Error("Google Sheet server connect nahi hua. API URL aur deployment access check karein.")); };
+      script.src = API_URL + (API_URL.includes("?") ? "&" : "?") + query.toString();
+      document.body.appendChild(script);
+    });
+  }
+
+  async function refreshTasks(silent = false) {
+    if (busy) return;
+    busy = true;
+    if (!silent) { clearError(); showNotice("Loading shared tasks…"); }
+    try {
+      const result = await api({ action: "list" });
+      allTasks = Array.isArray(result.tasks) ? result.tasks : [];
+      hideNotice(); clearError();
+      renderAll();
+    } catch (err) {
+      showError(err.message || "Tasks load nahi ho paaye.");
+      hideNotice();
+    } finally { busy = false; }
+  }
+
+  function pendingTasks() { return allTasks.filter(t => !t.completedAt); }
+  function completedToday() { return allTasks.filter(t => t.completedAt && dateKey(new Date(t.completedAt)) === dateKey()); }
+
+  function createTaskRow(task, isCompleted = false) {
+    const row = document.createElement("div");
+    row.className = "task";
+    if (!isCompleted) {
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.setAttribute("aria-label", `Complete ${task.text}`);
-      checkbox.addEventListener("change", () => {
-        const updated = readTasks().filter(t => t.id !== task.id);
-        saveTasks(updated);
-        let done = readDone() + 1;
-        localStorage.setItem(DONE_KEY, JSON.stringify({ date: todayKey(), count: done }));
-        render();
+      checkbox.addEventListener("change", async () => {
+        checkbox.disabled = true;
+        try {
+          await api({ action: "complete", id: task.id, by: getPerson() || "Unknown" });
+          await refreshTasks(true);
+        } catch (err) { checkbox.disabled = false; showError(err.message); }
       });
-      const info = document.createElement("div");
-      info.className = "tasktext";
-      const text = document.createElement("div");
-      text.textContent = task.text;
-      const date = document.createElement("span");
-      date.className = "taskdate";
-      date.textContent = `Added ${task.date || dateLabel()}`;
-      info.append(text, date);
-      const del = document.createElement("button");
-      del.className = "delete";
-      del.type = "button";
-      del.textContent = "×";
-      del.setAttribute("aria-label", `Delete ${task.text}`);
-      del.addEventListener("click", () => {
-        saveTasks(readTasks().filter(t => t.id !== task.id));
-        render();
-      });
-      row.append(checkbox, info, del);
-      list.appendChild(row);
+      row.appendChild(checkbox);
+    } else {
+      const tick = document.createElement("span");
+      tick.textContent = "✓";
+      tick.style.cssText = "color:var(--accent);font-weight:900;font-size:20px;width:23px;flex:none;text-align:center";
+      row.appendChild(tick);
+    }
+    const info = document.createElement("div");
+    info.className = "tasktext";
+    const text = document.createElement("div");
+    text.textContent = task.text;
+    const date = document.createElement("span");
+    date.className = "taskdate";
+    const location = task.type === "member" ? `Member: ${task.section}` : task.section;
+    date.textContent = `${isCompleted ? "Completed" : "Added"} ${timeLabel(isCompleted ? task.completedAt : task.createdAt) || dateLabel(task.createdAt)} · ${location}`;
+    info.append(text, date);
+    if (isCompleted && task.completedBy) {
+      const meta = document.createElement("div"); meta.className = "taskmeta"; meta.textContent = `Completed by ${task.completedBy}`; info.appendChild(meta);
+    }
+    const del = document.createElement("button");
+    del.className = "delete"; del.type = "button"; del.textContent = "×";
+    del.setAttribute("aria-label", `Delete ${task.text}`);
+    del.addEventListener("click", async () => {
+      if (!confirm(`Delete this task permanently?\n\n${task.text}`)) return;
+      del.disabled = true;
+      try { await api({ action: "delete", id: task.id }); await refreshTasks(true); }
+      catch (err) { del.disabled = false; showError(err.message); }
     });
+    row.append(info, del);
+    return row;
   }
-  $("taskForm").addEventListener("submit", (event) => {
+
+  function fillList(element, tasks, emptyMessage, completed = false) {
+    element.innerHTML = "";
+    if (!tasks.length) {
+      const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = emptyMessage; element.appendChild(empty); return;
+    }
+    tasks.sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    tasks.forEach(task => element.appendChild(createTaskRow(task, completed)));
+  }
+
+  function renderAll() {
+    updateWhoButton();
+    const pending = pendingTasks();
+    $("pendingCount").textContent = pending.length;
+    $("doneCount").textContent = completedToday().length;
+    const home = currentView.type === "home";
+    $("homeView").classList.toggle("hidden", !home);
+    $("detailView").classList.toggle("hidden", home);
+    if (home) {
+      const person = getPerson();
+      $("homeTaskHeading").textContent = `${person ? person.toUpperCase() : "YOUR"} TASKS`;
+      const memberCards = $("memberCards");
+      memberCards.innerHTML = "";
+      MEMBERS.forEach(name => {
+        const count = pending.filter(t => t.type === "member" && t.section === name).length;
+        const b = document.createElement("button"); b.type = "button"; b.className = "navcard";
+        const strong = document.createElement("strong"); strong.textContent = `👤 ${name}`;
+        const span = document.createElement("span"); span.textContent = `${count} pending task${count === 1 ? "" : "s"}`;
+        b.append(strong, span); b.addEventListener("click", () => openDetail("member", name)); memberCards.appendChild(b);
+      });
+      const mine = pending.filter(t => t.type === "member" && t.section === person);
+      $("taskCount").textContent = `${mine.length} pending`;
+      fillList($("homeTaskList"), mine, person ? "No tasks for you yet. Add one above or open a follow-up list." : "Select your name to get started.");
+    } else if (currentView.type === "member") {
+      const person = currentView.section;
+      const tasks = pending.filter(t => t.type === "member" && t.section === person);
+      $("detailTitle").textContent = `${person}'s Tasks`;
+      $("detailSubtitle").textContent = "Tasks assigned to this team member. Everyone can view this list.";
+      $("viewTypeLabel").textContent = "TEAM MEMBER";
+      $("taskInputDetail").placeholder = `Add a task for ${person}…`;
+      $("detailListHeading").textContent = "PENDING TASKS";
+      $("detailCount").textContent = `${tasks.length} pending`;
+      $("taskFormDetail").classList.remove("hidden");
+      $("historyLinkWrap").classList.add("hidden");
+      fillList($("detailTaskList"), tasks, "No pending tasks for this member.");
+    } else if (currentView.type === "category") {
+      const category = currentView.section;
+      const tasks = pending.filter(t => t.type === "followup" && t.section === category);
+      $("detailTitle").textContent = category;
+      $("detailSubtitle").textContent = "This list is shared with all team members.";
+      $("viewTypeLabel").textContent = "FOLLOW-UP";
+      $("taskInputDetail").placeholder = `Add to ${category}…`;
+      $("detailListHeading").textContent = "PENDING FOLLOW-UPS";
+      $("detailCount").textContent = `${tasks.length} pending`;
+      $("taskFormDetail").classList.remove("hidden");
+      $("historyLinkWrap").classList.add("hidden");
+      fillList($("detailTaskList"), tasks, "No pending follow-ups here yet.");
+    } else if (currentView.type === "completed") {
+      const tasks = showAllCompleted
+        ? allTasks.filter(t => !!t.completedAt)
+        : completedToday();
+      $("detailTitle").textContent = showAllCompleted ? "All Completed Tasks" : "Completed Today";
+      $("detailSubtitle").textContent = showAllCompleted ? "Completed task history. Records stay here until manually deleted." : "Tasks checked off today. These records remain saved in the shared sheet.";
+      $("viewTypeLabel").textContent = "TASK HISTORY";
+      $("taskFormDetail").classList.add("hidden");
+      $("detailListHeading").textContent = showAllCompleted ? "COMPLETED HISTORY" : "COMPLETED TODAY";
+      $("detailCount").textContent = `${tasks.length} task${tasks.length === 1 ? "" : "s"}`;
+      $("historyLinkWrap").classList.toggle("hidden", showAllCompleted);
+      fillList($("detailTaskList"), tasks, showAllCompleted ? "No completed tasks have been recorded." : "No tasks completed today yet.", true);
+    }
+  }
+
+  function openDetail(type, section) {
+    currentView = { type, section };
+    showAllCompleted = false;
+    renderAll();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  $("backBtn").addEventListener("click", () => { currentView = { type: "home", section: "" }; renderAll(); window.scrollTo({top:0,behavior:"smooth"}); });
+  document.querySelectorAll("[data-category]").forEach(b => b.addEventListener("click", () => openDetail("category", b.dataset.category)));
+  $("completedTodayBtn").addEventListener("click", () => openDetail("completed", ""));
+  $("showAllCompletedBtn").addEventListener("click", () => { showAllCompleted = true; renderAll(); });
+  $("whoBtn").addEventListener("click", openNameModal);
+
+  async function addTask(text, type, section) {
+    if (!getPerson()) { openNameModal(); throw new Error("Pehle apna naam select karein."); }
+    clearError(); showNotice("Saving task to shared sheet…");
+    const id = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    try {
+      await api({ action: "add", id, type, section, text, by: getPerson() });
+      await refreshTasks(true);
+      hideNotice();
+    } catch (err) { hideNotice(); showError(err.message || "Task save nahi hua."); }
+  }
+
+  $("taskFormHome").addEventListener("submit", async event => {
     event.preventDefault();
-    const text = $("taskInput").value.trim();
-    if (!text) return;
-    const tasks = readTasks();
-    tasks.unshift({ id: `${Date.now()}_${Math.random().toString(16).slice(2)}`, text, date: dateLabel() });
-    saveTasks(tasks);
-    $("taskInput").value = "";
-    render();
-    $("taskInput").blur();
+    const text = $("taskInputHome").value.trim(); if (!text) return;
+    if (!getPerson()) { openNameModal(); return; }
+    $("taskInputHome").value = "";
+    await addTask(text, "member", getPerson());
+    $("taskInputHome").blur();
   });
-  render();
+  $("taskFormDetail").addEventListener("submit", async event => {
+    event.preventDefault();
+    const text = $("taskInputDetail").value.trim(); if (!text) return;
+    if (!getPerson()) { openNameModal(); return; }
+    const type = currentView.type === "category" ? "followup" : "member";
+    const section = currentView.section;
+    $("taskInputDetail").value = "";
+    await addTask(text, type, section);
+    $("taskInputDetail").blur();
+  });
+
+  updateWhoButton();
+  if (!getPerson()) openNameModal(); else $("nameModal").classList.add("hidden");
+  renderAll();
+  refreshTasks();
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
   }
