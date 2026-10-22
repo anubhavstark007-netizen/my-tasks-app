@@ -44,7 +44,7 @@ function handleRequest_(p) {
     const by = clean_(p.by, 40);
     if (!id || !taskText || !section || !by) throw new Error("Task, section aur member name required hain.");
     if (!["member", "followup"].includes(type)) throw new Error("Invalid task type.");
-    const allowedMembers = ["Aakash", "Anuj", "Rishabh", "Anubhav", "Surbhi"];
+    const allowedMembers = ["Akash", "Annuj", "Rishabh", "Anubhav", "Surbhi", "Ashok"];
     const allowedCategories = ["Payment Follow-up", "Customer Follow-up", "Quotation Follow-up"];
     if (type === "member" && !allowedMembers.includes(section)) throw new Error("Invalid team member.");
     if (type === "followup" && !allowedCategories.includes(section)) throw new Error("Invalid follow-up category.");
