@@ -419,6 +419,31 @@
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
   }
+  
+const enableAlertsBtn = document.getElementById("enableAlertsBtn");
+const alertStatus = document.getElementById("alertStatus");
+
+enableAlertsBtn.addEventListener("click", function () {
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+
+  window.OneSignalDeferred.push(async function (OneSignal) {
+    try {
+      await OneSignal.Slidedown.promptPush();
+
+      if (alertStatus) {
+        alertStatus.textContent =
+          "Notification setup requested. Check your browser prompt.";
+      }
+    } catch (error) {
+      console.error("OneSignal notification error:", error);
+
+      if (alertStatus) {
+        alertStatus.textContent =
+          "Notification setup failed. Check browser settings and try again.";
+      }
+    }
+  });
+});
 </script>
 </body>
 </html>
