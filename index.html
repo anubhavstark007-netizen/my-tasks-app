@@ -68,6 +68,16 @@
     @keyframes appear { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
     @media (max-width:420px) { .cards { grid-template-columns:1fr; } .stat { padding:13px; } }
   </style>
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function (OneSignal) {
+    await OneSignal.init({
+      appId: "d4b735e2-8828-4cbc-b089-bfd8aacbc6a6",
+      safari_web_id: "web.onesignal.auto.3f550615-46c0-4fa5-9ee8-42953ece3d19"
+    });
+  });
+</script>
 </head>
 <body>
 <div id="nameModal" class="modal">
