@@ -396,8 +396,8 @@
       allShipments = Array.isArray(result.shipments) ? result.shipments : [];
       hideNotice(); clearError(); renderShipments();
     } catch (err) {
-      hideNotice(); showError(err.message || "Shipments load nahi ho paaye.");
-      $("shipmentGroups").innerHTML = '<div class="empty">Shipments load nahi ho paaye. Refresh karke dobara try karein.</div>';
+      hideNotice(); showError(err.message || " No Shipments.");
+      $("shipmentGroups").innerHTML = '<div class="empty"> No Shipments. Refresh and try .</div>';
     }
   }
 
