@@ -65,6 +65,30 @@
     .error { color:#ffb6b6; background:#3a1d2a; border:1px solid #693247; padding:12px; border-radius:12px; font-size:13px; margin:12px 0; overflow-wrap:anywhere; }
     .success { color:#a8f5d7; font-size:12px; min-height:16px; margin:-12px 0 16px; }
     .taskmeta { color:var(--muted); font-size:11px; margin-top:4px; }
+    .shipment-card { width:100%; text-align:left; padding:17px; border:1px solid #6b303c; background:linear-gradient(135deg,rgba(55,23,35,.96),rgba(17,28,47,.96)); border-radius:17px; color:var(--text); margin-top:22px; }
+    .shipment-card strong { display:block; font-size:16px; margin-bottom:5px; }
+    .shipment-card span { color:var(--muted); font-size:12px; }
+    .shipform { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:16px 0; }
+    .shipfield { min-width:0; display:flex; flex-direction:column; gap:6px; }
+    .shipfield.full { grid-column:1/-1; }
+    .shipfield label { color:var(--muted); font-size:12px; }
+    .shipfield input,.shipfield select,.shipfield textarea { width:100%; min-width:0; background:#101a2b; color:var(--text); border:1px solid #34445e; border-radius:11px; padding:12px; font:inherit; font-size:14px; }
+    .shipfield textarea { resize:vertical; min-height:76px; }
+    .shipactions { display:flex; gap:8px; grid-column:1/-1; }
+    .primarybtn { background:var(--accent); color:#092117; font-weight:800; border-radius:11px; padding:12px 15px; }
+    .shipment-groups { display:flex; flex-direction:column; gap:18px; }
+    .shipgroup { border:1px solid var(--line); background:rgba(17,28,47,.7); border-radius:16px; padding:12px; }
+    .shipgroup h3 { margin:2px 2px 10px; font-size:13px; }
+    .shiprow { border:1px solid #34445e; border-radius:13px; padding:13px; margin-top:9px; background:#101a2b; }
+    .shiprowtop { display:flex; justify-content:space-between; gap:10px; align-items:start; }
+    .shipref { font-weight:800; overflow-wrap:anywhere; }
+    .shiproute { color:var(--muted); font-size:12px; margin-top:5px; overflow-wrap:anywhere; }
+    .shipmeta { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:10px; font-size:12px; }
+    .shipmeta span { color:var(--muted); }
+    .shipbadge { display:inline-block; border:1px solid #75404a; background:#3a1d2a; color:#ffd5dc; border-radius:999px; padding:5px 8px; font-size:10px; white-space:nowrap; }
+    .shipbuttons { display:flex; gap:7px; margin-top:10px; }
+    .shipbuttons button { flex:1; }
+    @media (max-width:420px) { .shipform { grid-template-columns:1fr; } .shipfield.full,.shipactions { grid-column:auto; } }
     @keyframes appear { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
     @media (max-width:420px) { .cards { grid-template-columns:1fr; } .stat { padding:13px; } }
   </style>
@@ -133,6 +157,40 @@
       <button class="addbtn" aria-label="Add task" type="submit">+</button>
     </form>
     <div class="tasklist" id="homeTaskList"></div>
+    <button class="shipment-card" id="openShipmentsBtn" type="button"><strong>🚢 Shipment Track</strong><span>Track shipments, update ETA/ATA and manage shipment details</span></button>
+  </div>
+
+  <div id="shipmentView" class="hidden">
+    <div class="backrow"><button class="backbtn" id="shipmentBackBtn" type="button">← Home</button><span class="count">SHIPMENT MANAGEMENT</span></div>
+    <h2 class="viewtitle">Shipment Track</h2>
+    <p class="subtitle" style="margin-top:7px">Shared shipment records saved to the Google Sheet.</p>
+    <div class="stats">
+      <div class="stat"><span class="num" id="shipCountUpcoming">0</span><span class="label">Upcoming</span></div>
+      <div class="stat"><span class="num" id="shipCountApproaching">0</span><span class="label">ETA Approaching</span></div>
+      <div class="stat"><span class="num" id="shipCountArrival">0</span><span class="label">Arrival Update Required</span></div>
+      <div class="stat"><span class="num" id="shipCountArrived">0</span><span class="label">Arrived</span></div>
+    </div>
+    <div class="sectionhead"><h2 id="shipmentFormHeading">ADD SHIPMENT</h2><span class="count">Required: Reference, Origin, Destination</span></div>
+    <form id="shipmentForm" class="shipform">
+      <input id="shipmentId" type="hidden">
+      <div class="shipfield"><label for="shipReference">Reference No. *</label><input id="shipReference" maxlength="100" required placeholder="e.g. IG-2026-001"></div>
+      <div class="shipfield"><label for="shipStatus">Shipment Status</label><select id="shipStatus"><option value="">Select status</option><option>Booking Confirmed</option><option>In Transit</option><option>Customs Clearance</option><option>Out for Delivery</option><option>On Hold</option><option>Other</option></select></div>
+      <div class="shipfield"><label for="shipShipper">Shipper</label><input id="shipShipper" maxlength="180"></div>
+      <div class="shipfield"><label for="shipConsignee">Consignee</label><input id="shipConsignee" maxlength="180"></div>
+      <div class="shipfield"><label for="shipOrigin">Origin *</label><input id="shipOrigin" maxlength="120" required placeholder="POL / Airport / City"></div>
+      <div class="shipfield"><label for="shipDestination">Destination *</label><input id="shipDestination" maxlength="120" required placeholder="POD / Airport / City"></div>
+      <div class="shipfield"><label for="shipVessel">Vessel / Flight</label><input id="shipVessel" maxlength="120"></div>
+      <div class="shipfield"><label for="shipContainer">Container No.</label><input id="shipContainer" maxlength="180"></div>
+      <div class="shipfield"><label for="shipBlMawb">BL / MAWB No.</label><input id="shipBlMawb" maxlength="120"></div>
+      <div class="shipfield"><label for="shipAtd">ATD</label><input id="shipAtd" type="date"></div>
+      <div class="shipfield"><label for="shipEta">ETA</label><input id="shipEta" type="date"></div>
+      <div class="shipfield"><label for="shipAta">ATA</label><input id="shipAta" type="date"></div>
+      <div class="shipfield full"><label for="shipRemarks">Remarks</label><textarea id="shipRemarks" maxlength="1000" placeholder="Additional shipment notes"></textarea></div>
+      <div class="shipactions"><button class="primarybtn" id="saveShipmentBtn" type="submit">Save Shipment</button><button class="smallbtn hidden" id="cancelShipmentEditBtn" type="button">Cancel Edit</button></div>
+    </form>
+    <div class="sectionhead"><h2>SHIPMENT RECORDS</h2><button class="smallbtn" id="refreshShipmentsBtn" type="button">Refresh</button></div>
+    <input id="shipmentSearch" type="text" placeholder="Search reference, shipper, container, BL/MAWB…" autocomplete="off" style="width:100%;margin-bottom:14px">
+    <div id="shipmentGroups" class="shipment-groups"><div class="empty">Loading shipments…</div></div>
   </div>
 
   <div id="detailView" class="hidden">
@@ -147,7 +205,7 @@
     <div class="tasklist" id="detailTaskList"></div>
     <div id="historyLinkWrap" class="sectionhead hidden"><button class="smallbtn" id="showAllCompletedBtn" type="button">View all completed tasks</button></div>
   </div>
-  <div class="foot">Shared task data is saved in your Google Sheet until someone deletes it.<br>Choose the correct person before adding tasks.</div>
+  <div class="foot">Shared task and shipment data is saved in your Google Sheet until someone deletes it.<br>Choose the correct person before adding tasks or shipments.</div>
 </main>
 <script>
   // After deploying the Google Apps Script web app, paste its /exec URL here.
@@ -157,6 +215,7 @@
   const PERSON_KEY = "myTasksPersonSelection_v2";
   const $ = (id) => document.getElementById(id);
   let allTasks = [];
+  let allShipments = [];
   let currentView = { type: "home", section: "" };
   let showAllCompleted = false;
   let busy = false;
@@ -312,14 +371,140 @@
     tasks.forEach(task => element.appendChild(createTaskRow(task, completed)));
   }
 
+  function shipmentStatus(shipment) {
+    if (shipment.ata) return "Arrived";
+    if (!shipment.eta) return "ETA Not Set";
+    const today = new Date(); today.setHours(0,0,0,0);
+    const eta = new Date(shipment.eta + "T00:00:00");
+    if (Number.isNaN(eta.getTime())) return "ETA Not Set";
+    const days = Math.round((eta.getTime() - today.getTime()) / 86400000);
+    if (days < 0) return "Arrival Update Required";
+    if (days <= 10) return "ETA Approaching";
+    return "Upcoming";
+  }
+
+  function shipmentDate(value) {
+    if (!value) return "—";
+    const d = new Date(String(value).slice(0,10) + "T00:00:00");
+    return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
+  }
+
+  async function refreshShipments(silent = false) {
+    if (!silent) { clearError(); showNotice("Loading shared shipments…"); }
+    try {
+      const result = await api({ action: "shipmentList" });
+      allShipments = Array.isArray(result.shipments) ? result.shipments : [];
+      hideNotice(); clearError(); renderShipments();
+    } catch (err) {
+      hideNotice(); showError(err.message || "Shipments load nahi ho paaye.");
+      $("shipmentGroups").innerHTML = '<div class="empty">Shipments load nahi ho paaye. Refresh karke dobara try karein.</div>';
+    }
+  }
+
+  function renderShipments() {
+    const counts = {"Upcoming":0,"ETA Approaching":0,"Arrival Update Required":0,"Arrived":0};
+    allShipments.forEach(s => { const st=shipmentStatus(s); if (counts[st] !== undefined) counts[st]++; });
+    $("shipCountUpcoming").textContent = counts["Upcoming"];
+    $("shipCountApproaching").textContent = counts["ETA Approaching"];
+    $("shipCountArrival").textContent = counts["Arrival Update Required"];
+    $("shipCountArrived").textContent = counts["Arrived"];
+
+    const search = ($("shipmentSearch").value || "").trim().toLowerCase();
+    const filtered = allShipments.filter(s => [s.referenceNo,s.shipper,s.consignee,s.origin,s.destination,s.containerNo,s.blMawbNo,s.vesselFlight,s.status,s.remarks].join(" ").toLowerCase().includes(search));
+    const groups = ["Arrival Update Required","ETA Approaching","Upcoming","Arrived","ETA Not Set"];
+    const root = $("shipmentGroups"); root.innerHTML = "";
+    if (!filtered.length) {
+      const empty = document.createElement("div"); empty.className="empty"; empty.textContent = allShipments.length ? "No shipments match your search." : "No shipments added yet. Use the form above to add one."; root.appendChild(empty); return;
+    }
+    groups.forEach(group => {
+      const items = filtered.filter(s => shipmentStatus(s) === group).sort((a,b) => String(a.eta||"9999-99-99").localeCompare(String(b.eta||"9999-99-99")));
+      if (!items.length) return;
+      const section = document.createElement("section"); section.className="shipgroup";
+      const heading = document.createElement("h3"); heading.textContent = `${group.toUpperCase()} · ${items.length}`; section.appendChild(heading);
+      items.forEach(s => {
+        const card = document.createElement("article"); card.className="shiprow";
+        const top = document.createElement("div"); top.className="shiprowtop";
+        const title = document.createElement("div"); title.className="shipref"; title.textContent = s.referenceNo || "No reference";
+        const badge = document.createElement("span"); badge.className="shipbadge"; badge.textContent = group;
+        top.append(title,badge); card.appendChild(top);
+        const route = document.createElement("div"); route.className="shiproute"; route.textContent = `${s.origin || "Origin not set"} → ${s.destination || "Destination not set"}`; card.appendChild(route);
+        const meta = document.createElement("div"); meta.className="shipmeta";
+        const fields = [
+          ["Shipper",s.shipper], ["Consignee",s.consignee],
+          ["Vessel / Flight",s.vesselFlight], ["Container",s.containerNo],
+          ["BL / MAWB",s.blMawbNo], ["Status",s.status],
+          ["ATD",shipmentDate(s.atd)], ["ETA",shipmentDate(s.eta)], ["ATA",shipmentDate(s.ata)]
+        ];
+        fields.forEach(([label,value]) => { if (value && value !== "—") { const d=document.createElement("div"); const l=document.createElement("span"); l.textContent=label+": "; const v=document.createElement("b"); v.textContent=value; d.append(l,v); meta.appendChild(d); } });
+        card.appendChild(meta);
+        if (s.remarks) { const remarks=document.createElement("div"); remarks.className="shiproute"; remarks.textContent="Remarks: "+s.remarks; card.appendChild(remarks); }
+        const buttons=document.createElement("div"); buttons.className="shipbuttons";
+        const edit=document.createElement("button"); edit.type="button"; edit.className="smallbtn"; edit.textContent="Edit"; edit.addEventListener("click",()=>editShipment(s));
+        const del=document.createElement("button"); del.type="button"; del.className="smallbtn"; del.textContent="Delete"; del.addEventListener("click",async()=>{
+          if (!confirm(`Delete shipment ${s.referenceNo}? This cannot be undone.`)) return;
+          del.disabled=true;
+          try { await api({action:"shipmentDelete",id:s.id}); await refreshShipments(true); }
+          catch(err) { del.disabled=false; showError(err.message); }
+        });
+        buttons.append(edit,del); card.appendChild(buttons); section.appendChild(card);
+      });
+      root.appendChild(section);
+    });
+  }
+
+  function resetShipmentForm() {
+    $("shipmentForm").reset(); $("shipmentId").value="";
+    $("shipmentFormHeading").textContent="ADD SHIPMENT";
+    $("saveShipmentBtn").textContent="Save Shipment";
+    $("cancelShipmentEditBtn").classList.add("hidden");
+  }
+
+  function editShipment(s) {
+    const map = {
+      shipmentId:"id", shipReference:"referenceNo", shipStatus:"status",
+      shipShipper:"shipper", shipConsignee:"consignee", shipOrigin:"origin",
+      shipDestination:"destination", shipVessel:"vesselFlight", shipContainer:"containerNo",
+      shipBlMawb:"blMawbNo", shipAtd:"atd", shipEta:"eta", shipAta:"ata", shipRemarks:"remarks"
+    };
+    Object.keys(map).forEach(id => { $(id).value = s[map[id]] || ""; });
+    $("shipmentFormHeading").textContent="EDIT SHIPMENT";
+    $("saveShipmentBtn").textContent="Update Shipment";
+    $("cancelShipmentEditBtn").classList.remove("hidden");
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  async function saveShipment(event) {
+    event.preventDefault();
+    if (!getPerson()) { openNameModal(); showError("Shipment save karne se pehle apna naam select karein."); return; }
+    const id = $("shipmentId").value;
+    const params = {
+      action: id ? "shipmentUpdate" : "shipmentAdd", id:id,
+      by:getPerson(), referenceNo:$("shipReference").value.trim(),
+      status:$("shipStatus").value, shipper:$("shipShipper").value.trim(),
+      consignee:$("shipConsignee").value.trim(), origin:$("shipOrigin").value.trim(),
+      destination:$("shipDestination").value.trim(), vesselFlight:$("shipVessel").value.trim(),
+      containerNo:$("shipContainer").value.trim(), blMawbNo:$("shipBlMawb").value.trim(),
+      atd:$("shipAtd").value, eta:$("shipEta").value, ata:$("shipAta").value,
+      remarks:$("shipRemarks").value.trim()
+    };
+    $("saveShipmentBtn").disabled=true; clearError(); showNotice("Saving shipment to shared Google Sheet…");
+    try {
+      await api(params); resetShipmentForm(); await refreshShipments(true); hideNotice(); showNotice("Shipment saved successfully.");
+      setTimeout(()=>hideNotice(),2500);
+    } catch(err) { hideNotice(); showError(err.message || "Shipment save nahi hua."); }
+    finally { $("saveShipmentBtn").disabled=false; }
+  }
+
   function renderAll() {
     updateWhoButton();
     const pending = pendingTasks();
     $("pendingCount").textContent = pending.length;
     $("doneCount").textContent = completedToday().length;
     const home = currentView.type === "home";
+    const shipmentsView = currentView.type === "shipments";
     $("homeView").classList.toggle("hidden", !home);
-    $("detailView").classList.toggle("hidden", home);
+    $("detailView").classList.toggle("hidden", home || shipmentsView);
+    $("shipmentView").classList.toggle("hidden", !shipmentsView);
     if (home) {
       const person = getPerson();
       $("homeTaskHeading").textContent = `${person ? person.toUpperCase() : "YOUR"} TASKS`;
@@ -381,6 +566,12 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   $("backBtn").addEventListener("click", () => { currentView = { type: "home", section: "" }; renderAll(); window.scrollTo({top:0,behavior:"smooth"}); });
+  $("openShipmentsBtn").addEventListener("click", () => { currentView={type:"shipments",section:""}; renderAll(); refreshShipments(); window.scrollTo({top:0,behavior:"smooth"}); });
+  $("shipmentBackBtn").addEventListener("click", () => { currentView={type:"home",section:""}; renderAll(); window.scrollTo({top:0,behavior:"smooth"}); });
+  $("shipmentForm").addEventListener("submit", saveShipment);
+  $("cancelShipmentEditBtn").addEventListener("click", resetShipmentForm);
+  $("refreshShipmentsBtn").addEventListener("click", () => refreshShipments());
+  $("shipmentSearch").addEventListener("input", renderShipments);
   document.querySelectorAll("[data-category]").forEach(b => b.addEventListener("click", () => openDetail("category", b.dataset.category)));
   $("completedTodayBtn").addEventListener("click", () => openDetail("completed", ""));
   $("showAllCompletedBtn").addEventListener("click", () => { showAllCompleted = true; renderAll(); });
